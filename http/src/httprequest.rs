@@ -1,3 +1,20 @@
+use std::collections::HashMap;
+
+// * resource ---------------------------------------------------------- //
+#[derive(Debug, PartialEq)] 
+pub enum Resource {
+    Path(String),
+}
+
+#[derive(Debug)]
+pub struct HttpRequest {
+    pub method: Method,
+    pub version: Version,
+    pub resource: Resource,
+    pub headers: HashMap<String, String>,
+    pub msg_body: String,
+}
+
 // * method ---------------------------------------------------------- //
 #[derive(Debug, PartialEq)]
 pub enum Method {
