@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, os::unix::process};
 
 // * resource ---------------------------------------------------------- //
 #[derive(Debug, PartialEq)] 
@@ -13,6 +13,68 @@ pub struct HttpRequest {
     pub resource: Resource,
     pub headers: HashMap<String, String>,
     pub msg_body: String,
+}
+
+// * http ---------------------------------------------------------- //
+impl From<String> for HttpRequest {
+    fn from(req: String) -> Self {
+        let mut parsed_method = Method::Uninitialized;
+        let mut parsed_version = Version::V1_1;
+        let mut parsed_resource = Resource::Path("".to_string());
+        let mut parsed_headers = HashMap::new();
+        let mut parsed_msg_body = "";
+
+        for line in req.lines() {
+            if line.contains("HTTP") {
+                let (method, resource, version) = process_req_line(line);
+                parsed_method = method;
+                parsed_version = version;
+                parsed_resource = resource;
+            } else if line.contains(":") {
+                let (key, value) = process_header_line(line);
+                parsed_headers.insert(key, value);
+            } else if line.len() == 0  {}
+            else {
+                parsed_msg_body = line;
+            }
+        }
+        
+        HttpRequest { 
+            method: parsed_method, 
+            version: parsed_version,
+            resource: parsed_resource, 
+            headers: parsed_headers, 
+            msg_body: parsed_msg_body.to_string() }
+    }
+}
+
+fn process_req_line(s: &str) -> (Method, Resource, Version) {
+    let mut words = s.split_whitespace();
+    let method = words.next().unwrap();
+    let resource = words.next().unwrap();
+    let version = words.next().unwrap();
+
+    (
+        method.into(),
+        Resource::Path(resource.to_string()),
+        version.into(),
+    )
+}
+
+fn process_header_line(s: &str) -> (String, String) {
+    let mut header_items = s.split(":");
+    let mut key = String::from("");
+    let mut value = String::from("");
+
+    if let Some(k) = header_items.next() {
+        key = k.to_string();
+    }
+
+    if let Some(v) = header_items.next() {
+        value = v.to_string()
+    }
+
+    (key, value)
 }
 
 // * method ---------------------------------------------------------- //
@@ -49,7 +111,6 @@ impl From<&str> for Version {
         }
     }
 }
-
 // ? tests ---------------------------------------------------------- //
 #[cfg(test)]
 mod tests {
